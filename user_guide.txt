@@ -1,0 +1,3 @@
+## Export this before launch ROS2 pkg##
+export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+export FASTRTPS_DEFAULT_PROFILES_FILE=“~/.ros/fastdds.xml”
