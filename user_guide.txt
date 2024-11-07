@@ -1,3 +1,11 @@
 ## Export this before launch ROS2 pkg##
 export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
 export FASTRTPS_DEFAULT_PROFILES_FILE=“~/.ros/fastdds.xml”
+
+## Spot standalone 
+## Refer to build IsaacSim-ros_workspaces tutorial
+cd IsaacSim-ros_workspaces/build_ws/foxy/foxy_ws(or humble)
+source install/setup.bash
+cd ~/.local/share/ov/pkg/isaac-sim-4.2.0
+./python.sh standalone_examples/api/omni.isaac.quadruped/spot_nav_standalone.py --env lobby
+
