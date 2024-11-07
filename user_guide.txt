@@ -4,6 +4,7 @@ export FASTRTPS_DEFAULT_PROFILES_FILE=“~/.ros/fastdds.xml”
 
 ## Spot standalone 
 ## Refer to build IsaacSim-ros_workspaces tutorial
+## add spot_nav_standalone.py to ~/.local/share/ov/pkg/isaac-sim-4.2.0/standalone_examples/api/omni.isaac.quadruped
 cd IsaacSim-ros_workspaces/build_ws/foxy/foxy_ws(or humble)
 source install/setup.bash
 cd ~/.local/share/ov/pkg/isaac-sim-4.2.0
