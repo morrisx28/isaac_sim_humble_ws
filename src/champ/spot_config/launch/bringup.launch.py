@@ -19,7 +19,6 @@ from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.substitutions import FindPackageShare
 
-
 def generate_launch_description():
     this_package = FindPackageShare('spot_config')
     joints_config = PathJoinSubstitution(
