@@ -10,8 +10,10 @@ import sys
 from omni.isaac.core import World
 from omni.isaac.core.utils.prims import define_prim, get_prim_at_path
 from omni.isaac.nucleus import get_assets_root_path
-# from omni.isaac.quadruped.robots import SpotFlatTerrainPolicy
-from spot_ctrl import SpotFlatTerrainPolicy
+from go2.go2_ctrl import Go2FlatTerrainPolicy
+from go2.go2_sensors import SensorManager
+from go2.go2_action_graph import ActionGraphManager
+# from ros2.go2_ros2_bridge import RobotDataManager
 from omni.isaac.core.objects import VisualCuboid
 from omni.isaac.core.utils.extensions import enable_extension
 
@@ -36,9 +38,9 @@ class Pose:
 
 
 
-class SpotNav(Node):
+class Go2Nav(Node):
     def __init__(self, env_usd_path, spot_init_pose: Pose):
-        super().__init__("Spot_Nav")
+        super().__init__("Go2_Nav")
 
         # setting up environment
         self.loadEnv(env_usd_path)
@@ -49,10 +51,10 @@ class SpotNav(Node):
         self.cmd = np.zeros(3) # [v_x, v_y, w_z]
         self.initSpot(spot_init_pose)
 
-        self.ros_sub = self.create_subscription(Twist, "cmd_vel", self.spotCmdCallback, 1)
+        self.ros_sub = self.create_subscription(Twist, "cmd_vel", self.go2CmdCallback, 1)
         self.world.reset()
 
-    def spotCmdCallback(self, msg: Twist):
+    def go2CmdCallback(self, msg: Twist):
         if self.world.is_playing():
             self.cmd[0] = msg.linear.x * self.cmd_scale
             self.cmd[2] = msg.angular.z * self.cmd_scale
@@ -63,32 +65,39 @@ class SpotNav(Node):
             carb.log_error("Could not find Isaac Sim assets folder")
             simulation_app.close()
             sys.exit()
-        self.world = World(stage_units_in_meters=1.0, physics_dt=1 / 500, rendering_dt=1 / 50)
+        self.world = World(stage_units_in_meters=1.0, physics_dt=1 / 200, rendering_dt=1 / 50)
 
-        prim = define_prim("/World/Ground", "Xform")
+        prim = define_prim("/World/Environment", "Xform")
         asset_path = env_usd_path
         prim.GetReferences().AddReference(asset_path)
     
     def onPhysicStep(self, step_size):
         if self.first_step:
-            self.spot.initialize()
+            self.go2.initialize()
             self.first_step = False
         elif self.reset_needed:
             self.world.reset(True)
             self.reset_needed = False
             self.first_step = True
         else:
-            self.spot.advance(step_size, self.cmd)
+            self.go2.advance(step_size, self.cmd)
         
 
     def initSpot(self, spot_init_pose: Pose):
-        self.spot = SpotFlatTerrainPolicy(
-            prim_path="/World/Spot",
-            name="Spot",
-            usd_path="omniverse://localhost/Library/spot.usd",
+        self.go2 = Go2FlatTerrainPolicy(
+            prim_path="/World/Go2",
+            name="Go2",
+            usd_path="omniverse://localhost/Library/go2.usd",
             position=spot_init_pose.position,
             orientation=spot_init_pose.orientation
         )
+        sm = SensorManager()
+        go2_lidar = sm.add_camera()
+        go2_cam = sm.add_rtx_lidar()
+        am = ActionGraphManager()
+        am.create_camera_graph()
+        am.create_lidar_graph()
+        # am.create_odom_graph() # still need debug
         self.world.add_physics_callback("physics_step", callback_fn=self.onPhysicStep)
         self.world.reset()
 
@@ -118,15 +127,15 @@ if __name__ == "__main__":
 
     B1_USD_PATH = "omniverse://localhost/Library/tsmc_b1_map.usd"
     LOBBY_USD_PATH = "omniverse://localhost/Library/tsmc_1f_map.usd"
-    spot_init_pose = Pose()
+    go2_init_pose = Pose()
     if args.env == "b1":
         ENV_USD_PATH = B1_USD_PATH
-        spot_init_pose.position = np.array([6.65, -66.1, 0.8])
+        go2_init_pose.position = np.array([6.65, -66.1, 0.8])
     elif args.env == "lobby":
         ENV_USD_PATH = LOBBY_USD_PATH
-        spot_init_pose.position = np.array([214, -257.46, 0.8])
-        spot_init_pose.orientation = np.array([0.707, 0, 0, 0.707])
+        go2_init_pose.position = np.array([214, -257.46, 0.8])
+        go2_init_pose.orientation = np.array([0.707, 0, 0, 0.707])
 
     rclpy.init()
-    subscriber = SpotNav(ENV_USD_PATH, spot_init_pose)
+    subscriber = Go2Nav(ENV_USD_PATH, go2_init_pose)
     subscriber.run_simulation()

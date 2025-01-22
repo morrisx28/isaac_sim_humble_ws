@@ -1,0 +1,6 @@
+__pycache__/go2_ctrl.cpython-310.pyc
+__pycache__/spot_ctrl.cpython-310.pyc
+ros2/__pycache__/go2_ros2_bridge.cpython-310.pyc
+go2/__pycache__/go2_action_graph.cpython-310.pyc
+go2/__pycache__/go2_ctrl.cpython-310.pyc
+go2/__pycache__/go2_sensors.cpython-310.pyc
