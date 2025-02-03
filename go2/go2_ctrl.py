@@ -77,6 +77,9 @@ class Go2FlatTerrainPolicy:
         self._previous_action = np.zeros(12)
         self._policy_counter = 0
         self._decimation = 4
+    
+    def get_odom_info(self):
+        return self.pos_IB, self.q_IB, self.lin_vel_I, self.ang_vel_I
 
     def _compute_observation(self, command):
         """
@@ -89,14 +92,14 @@ class Go2FlatTerrainPolicy:
         np.ndarray -- The observation vector.
 
         """
-        lin_vel_I = self.robot.get_linear_velocity()
-        ang_vel_I = self.robot.get_angular_velocity()
-        pos_IB, q_IB = self.robot.get_world_pose()
+        self.lin_vel_I = self.robot.get_linear_velocity()
+        self.ang_vel_I = self.robot.get_angular_velocity()
+        self.pos_IB, self.q_IB = self.robot.get_world_pose()
 
-        R_IB = quat_to_rot_matrix(q_IB)
+        R_IB = quat_to_rot_matrix(self.q_IB)
         R_BI = R_IB.transpose()
-        lin_vel_b = np.matmul(R_BI, lin_vel_I) # R_BI @ lin_vel_I
-        ang_vel_b = np.matmul(R_BI, ang_vel_I) # R_BI @ ang_vel_I
+        lin_vel_b = np.matmul(R_BI, self.lin_vel_I) # R_BI @ lin_vel_I
+        ang_vel_b = np.matmul(R_BI, self.ang_vel_I) # R_BI @ ang_vel_I
         gravity_b = np.matmul(R_BI, np.array([0.0, 0.0, -1.0])) 
 
         obs = np.zeros(48)
@@ -117,10 +120,6 @@ class Go2FlatTerrainPolicy:
         obs[24:36] = current_joint_vel
         # Previous Action
         obs[36:48] = self._previous_action
-
-        # print(f'joint position: {obs[12:24]}')
-        # print(f'jointt velocity: {obs[24:36]}')
-        # print(f'last action: {obs[36:48]}')
 
         return obs
 

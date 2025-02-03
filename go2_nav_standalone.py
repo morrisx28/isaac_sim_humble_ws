@@ -17,6 +17,7 @@ from go2.go2_action_graph import ActionGraphManager
 from omni.isaac.core.objects import VisualCuboid
 from omni.isaac.core.utils.extensions import enable_extension
 
+from nav_msgs.msg import Odometry
 # enable ROS2 bridge extension
 enable_extension("omni.isaac.ros2_bridge")
 
@@ -51,13 +52,38 @@ class Go2Nav(Node):
         self.cmd = np.zeros(3) # [v_x, v_y, w_z]
         self.initSpot(spot_init_pose)
 
-        self.ros_sub = self.create_subscription(Twist, "cmd_vel", self.go2CmdCallback, 1)
+        self.cmd_sub = self.create_subscription(Twist, "cmd_vel", self.go2CmdCallback, 1)
+        # self.odom_pub = self.create_publisher(Odometry, "odom", 10)
+        # self.create_timer(0.1, self.pubOdomData)
         self.world.reset()
 
     def go2CmdCallback(self, msg: Twist):
         if self.world.is_playing():
             self.cmd[0] = msg.linear.x * self.cmd_scale
             self.cmd[2] = msg.angular.z * self.cmd_scale
+
+    def generateOdomMsg(self, base_pos, base_rot, base_lin_vel_b, base_ang_vel_b):
+        odom_msg = Odometry()
+        odom_msg.header.stamp = self.get_clock().now().to_msg()
+        odom_msg.header.frame_id = "odom"
+        odom_msg.child_frame_id = "base"
+        odom_msg.pose.pose.position.x = base_pos[0].item()
+        odom_msg.pose.pose.position.y = base_pos[1].item()
+        odom_msg.pose.pose.position.z = base_pos[2].item()
+        odom_msg.pose.pose.orientation.x = base_rot[1].item()
+        odom_msg.pose.pose.orientation.y = base_rot[2].item()
+        odom_msg.pose.pose.orientation.z = base_rot[3].item()
+        odom_msg.pose.pose.orientation.w = base_rot[0].item()
+        odom_msg.twist.twist.linear.x = base_lin_vel_b[0].item()
+        odom_msg.twist.twist.linear.y = base_lin_vel_b[1].item()
+        odom_msg.twist.twist.linear.z = base_lin_vel_b[2].item()
+        odom_msg.twist.twist.angular.x = base_ang_vel_b[0].item()
+        odom_msg.twist.twist.angular.y = base_ang_vel_b[1].item()
+        odom_msg.twist.twist.angular.z = base_ang_vel_b[2].item()
+        self.odom_pub.publish(odom_msg)
+    
+    def pubOdomData(self):
+        self.generateOdomMsg(self.base_pos, self.base_rot, self.base_lin_vel, self.base_ang_vel)
 
     def loadEnv(self, env_usd_path):
         assets_root_path = get_assets_root_path()
@@ -81,6 +107,7 @@ class Go2Nav(Node):
             self.first_step = True
         else:
             self.go2.advance(step_size, self.cmd)
+            self.base_pos, self.base_rot, self.base_lin_vel, self.base_ang_vel = self.go2.get_odom_info()
         
 
     def initSpot(self, spot_init_pose: Pose):
@@ -97,7 +124,7 @@ class Go2Nav(Node):
         am = ActionGraphManager()
         am.create_camera_graph()
         am.create_lidar_graph()
-        # am.create_odom_graph() # still need debug
+        # am.create_odom_graph()
         self.world.add_physics_callback("physics_step", callback_fn=self.onPhysicStep)
         self.world.reset()
 
